@@ -3,16 +3,16 @@ module climate_model_v2
 using DifferentialEquations, Plots, CSV, DataFrames
 
 # ── Fixed parameters ─────────────────────────────────────────────────────────
-const α  = 0.33     # net climate sensitivity coefficient
+const α  = 0.035    # net climate sensitivity coefficient (τ_T ≈ 24 yr)
 const λ  = 1.2      # temperature damping coefficient
 const β  = 5.35     # CO₂ radiative forcing coefficient
 const C★ = 278.0    # pre-industrial reference carbon level (ppm)
 const γ  = 0.015    # carbon absorption rate (yr⁻¹)
-const ϕ  = 11.3     # carbon emission factor
+const ϕ  = 9.0      # carbon emission factor (calibrated for +2 ppm/yr net at t=0)
 const s  = 0.25     # savings rate
-const A₀ = 0.65     # baseline TFP (calibrated for ~6 % yr⁻¹ initial growth; K equilibrates near 2)
+const A₀ = 0.30     # baseline TFP (calibrated for ~2.5 % yr⁻¹ initial growth with δ=0.05)
 const θ  = 0.3      # capital output elasticity
-const δ  = 0.1      # capital depreciation rate (yr⁻¹)
+const δ  = 0.05      # capital depreciation rate (yr⁻¹)
 const η  = 0.00236  # temperature damage coefficient
 const κ  = 0.05     # mitigation cost coefficient
 const n  = 2        # Hill coefficient
@@ -53,10 +53,10 @@ function solve_model(ode!, ρ, ω; ts=tspan)
 end
 
 # ── Parameter grids ───────────────────────────────────────────────────────────
-const ρ_grid = collect(0.05:0.05:0.50)   # 10 values
-const ω_grid = collect(0.01:0.01:0.10)   # 10 values
-const ω_ref  = 0.05    # reference ω for ρ sweep
-const ρ_ref  = 0.25    # reference ρ for ω sweep
+const ρ_grid = collect(0.02:0.01:0.12)   # 11 values: BAU → ambitious
+const ω_grid = collect(0.005:0.005:0.05) # 10 values: low → high resistance
+const ω_ref  = 0.01    # reference ω for ρ sweep
+const ρ_ref  = 0.05    # reference ρ for ω sweep (moderate scenario)
 
 const var_labels = ["T (°C)", "C (ppm)", "K (relative units)", "M"]
 const var_syms   = ["T", "C", "K", "M"]
@@ -99,7 +99,15 @@ function run_simulations()
     savefig(fig, joinpath(dir, "adopted_rho_sweep_500yr.pdf"))
     println("Saved adopted_rho_sweep_500yr.pdf")
 
+    # Hopf bifurcation: ρ values straddling the bifurcation point (~0.267)
+    hopf_rhos = [0.20, 0.24, 0.26, 0.265, 0.27, 0.28, 0.30, 0.35]
+    fig = make_sweep_figure(ode_v1!, hopf_rhos, ω_ref, "ρ", "ω", "Hopf region", true; ts=tspan_long)
+    savefig(fig, joinpath(dir, "hopf_bifurcation.pdf"))
+    println("Saved hopf_bifurcation.pdf")
+
     println("\nDone. All figures in figures/")
 end
 
 end # module climate_model_v2
+
+climate_model_v2.run_simulations()
